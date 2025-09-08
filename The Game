@@ -1,0 +1,156 @@
+// === Simen Sez ===
+(() => {
+  // clean up previous run
+  document.querySelectorAll("#simon-panel,#simon-style").forEach(el=>el.remove());
+
+  // style sheet for animations
+  const style = document.createElement("style");
+  style.id = "simon-style";
+  style.textContent = `
+  #simon-panel {
+    background: linear-gradient(135deg,#fdfdfd,#e3f0ff);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  #simon-panel h2 {
+    font-weight:600;
+    color:#333;
+  }
+  .typed-letter {
+    display:inline-block;
+    opacity:0;
+    transform:translateY(10px) scale(0.9);
+    animation: fadeInUp 0.2s forwards;
+    margin:0 2px;
+    font-size:22px;
+    font-weight:bold;
+    color:#333;
+  }
+  @keyframes fadeInUp {
+    to {opacity:1;transform:translateY(0) scale(1);}
+  }
+  .flash-letter {
+    display:inline-block;
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0%{transform:scale(0.5);opacity:0;}
+    50%{transform:scale(1.3);opacity:1;}
+    100%{transform:scale(1);opacity:1;}
+  }`;
+  document.head.appendChild(style);
+
+  const letters = "ASDFGHJKLQWERTYUIOPZXCVBNM";
+  let sequence=[],userInput="",round=0,lives=3,acceptingInput=false;
+
+  let highScore=0;
+  try{highScore=parseInt(localStorage.getItem("simonHigh")||"0");}catch(e){}
+  function saveHighScore(score){try{localStorage.setItem("simonHigh",score);}catch(e){}}
+
+  // panel UI
+  const panel=document.createElement("div");
+  panel.id="simon-panel";
+  Object.assign(panel.style,{
+    position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+    width:"440px",height:"320px",borderRadius:"20px",
+    boxShadow:"0 8px 20px rgba(0,0,0,0.2)",
+    textAlign:"center",padding:"20px",zIndex:999999
+  });
+  panel.innerHTML=`
+    <h2>Simen Sez</h2>
+    <div id="hud" style="font-weight:bold;margin-bottom:4px"></div>
+    <div id="lives" style="font-size:20px;color:red;margin-bottom:6px"></div>
+    <div id="letter" style="font-size:80px;font-weight:bold;height:100px;margin-top:5px"></div>
+    <div id="typed" style="font-size:20px;color:#333;height:30px;margin-top:10px"></div>
+    <div id="msg" style="font-size:14px;color:#555;margin-top:10px">Press any key to start</div>`;
+  document.body.appendChild(panel);
+
+  const hud=panel.querySelector("#hud"),
+        livesBox=panel.querySelector("#lives"),
+        letterBox=panel.querySelector("#letter"),
+        typedBox=panel.querySelector("#typed"),
+        msgBox=panel.querySelector("#msg");
+
+  function updateHUD(){
+    hud.textContent=`Round: ${round} — High: ${highScore}`;
+    livesBox.textContent="♡".repeat(lives);
+  }
+
+  function resetGame(){
+    sequence=[];userInput="";round=0;lives=3;
+    letterBox.textContent="";typedBox.textContent="";
+    msgBox.textContent="Press any key to start";
+    acceptingInput=false;updateHUD();
+  }
+
+  function nextRound(){
+    userInput="";typedBox.textContent="";round++;
+    sequence.push(letters[Math.floor(Math.random()*letters.length)]);
+    updateHUD();msgBox.textContent="Watch the sequence";acceptingInput=false;
+    showSequence(0);
+  }
+
+  function showSequence(i){
+    if(i>=sequence.length){
+      letterBox.textContent="";
+      msgBox.textContent="Type the sequence then press Enter";
+      acceptingInput=true;return;
+    }
+    const span=document.createElement("span");
+    span.className="flash-letter";
+    span.textContent=sequence[i];
+    letterBox.textContent="";
+    letterBox.appendChild(span);
+    setTimeout(()=>{letterBox.textContent="";},400);
+    setTimeout(()=>showSequence(i+1),700);
+  }
+
+  function submitAnswer(){
+    if(!acceptingInput)return;
+    if(userInput===sequence.join("")){
+      if(round>highScore){highScore=round;saveHighScore(highScore);}
+      acceptingInput=false;setTimeout(nextRound,600);msgBox.textContent="Correct!";
+    } else {
+      lives--;
+      if(lives<=0){
+        msgBox.textContent=`Game Over! You reached round ${round}. Press any key to restart.`;
+        acceptingInput=false;
+      } else {
+        msgBox.textContent=`Wrong! Lives left: ${lives}. Watch again.`;
+        userInput="";typedBox.textContent="";acceptingInput=false;setTimeout(()=>showSequence(0),700);
+      }
+    }
+    updateHUD();
+  }
+
+  function renderTyped(){
+    typedBox.textContent="";
+    for(const ch of userInput){
+      const sp=document.createElement("span");
+      sp.className="typed-letter";
+      sp.textContent=ch;
+      typedBox.appendChild(sp);
+    }
+  }
+
+  window.addEventListener("keydown",e=>{
+    if(!acceptingInput && round===0 && e.key.length===1){nextRound();return;}
+    if(!acceptingInput){if(lives<=0){resetGame();}return;}
+    if(e.key==="Enter"){submitAnswer();return;}
+    if(e.key==="Backspace"){userInput=userInput.slice(0,-1);renderTyped();return;}
+    if(e.key.length===1){
+      const k=e.key.toUpperCase();
+      if(letters.includes(k)){userInput+=k;renderTyped();}
+    }
+  });
+
+  resetGame();
+  alert("Simen Sez:\nWatch the letters flash, type the full sequence, then press Enter!");
+})();
+
+Coded by Someone, Somewhere, Somehow
+
+8/09/2025
+
+
+
+
